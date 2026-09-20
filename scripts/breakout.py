@@ -22,6 +22,8 @@ SPEED = 620.0       # px/s
 N_BALLS = 6
 DT = 1.0 / 240
 T_MAX = 40.0
+TAIL = 1.2          # keep playing briefly after the last brick, so the loop has
+                    # keyframes all the way to 100% instead of snapping to the origin
 
 THEMES = {
     "dark": {
@@ -158,6 +160,7 @@ def simulate(bricks, width, height, floor_y):
 
         if remaining == 0 and clear_t is None:
             clear_t = t
+        if clear_t is not None and t >= clear_t + TAIL:
             break
 
     for b in balls:
@@ -187,7 +190,7 @@ def build(theme_name, cells, n_weeks, total, out_path):
             bricks[(wi, wd)] = level_of(count, thresholds)
 
     balls, paddle_ev, total_t, destroyed, alive = simulate(bricks, width, height, floor_y)
-    dur = round(total_t + 1.2, 2)
+    dur = round(total_t, 2)
     pct = lambda t: max(0.0, min(100.0, t / dur * 100.0))
 
     parts = []
@@ -223,9 +226,10 @@ def build(theme_name, cells, n_weeks, total, out_path):
     for bi, b in enumerate(balls):
         stops = []
         last = -1.0
-        for (t, x, y) in b["ev"]:
+        ev = b["ev"]
+        for i, (t, x, y) in enumerate(ev):
             p = pct(t)
-            if p - last < 0.05:
+            if p - last < 0.05 and i != len(ev) - 1:
                 continue
             last = p
             stops.append("%.2f%%{transform:translate(%dpx,%dpx)}" % (p, round(x), round(y)))
@@ -236,9 +240,9 @@ def build(theme_name, cells, n_weeks, total, out_path):
     # paddle
     stops = []
     last = -1.0
-    for (t, x) in paddle_ev:
+    for i, (t, x) in enumerate(paddle_ev):
         p = pct(t)
-        if p - last < 0.05:
+        if p - last < 0.05 and i != len(paddle_ev) - 1:
             continue
         last = p
         stops.append("%.2f%%{transform:translate(%dpx,0)}" % (p, round(x - PADDLE_W / 2)))
