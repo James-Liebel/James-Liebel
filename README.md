@@ -32,9 +32,9 @@ Mostly Python, SQL, and scikit-learn. Microsoft certified in Power BI.
 
 <a href="https://github.com/James-Liebel?tab=repositories">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/James-Liebel/James-Liebel/output/snake.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/James-Liebel/James-Liebel/output/snake-light.svg">
-    <img src="https://raw.githubusercontent.com/James-Liebel/James-Liebel/output/snake.svg" width="100%" alt="My contribution graph being eaten by a snake">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/James-Liebel/James-Liebel/output/breakout.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/James-Liebel/James-Liebel/output/breakout-light.svg">
+    <img src="https://raw.githubusercontent.com/James-Liebel/James-Liebel/output/breakout.svg" width="100%" alt="Breakout played against my contribution graph">
   </picture>
 </a>
 
