@@ -1,0 +1,54 @@
+name: Generate contribution breakout
+
+on:
+  schedule:
+    # Redraw once a day so the board matches the current contribution graph.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/breakout.py"
+      - ".github/workflows/breakout.yml"
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch contribution calendar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist
+          gh api graphql -f query='
+            {
+              user(login: "James-Liebel") {
+                contributionsCollection {
+                  contributionCalendar {
+                    totalContributions
+                    weeks {
+                      firstDay
+                      contributionDays { date weekday contributionCount }
+                    }
+                  }
+                }
+              }
+            }' > calendar.json
+
+      - name: Render the board
+        run: python scripts/breakout.py calendar.json dist
+
+      - uses: crazy-max/ghaction-github-pages@v4
+        with:
+          target_branch: output
+          build_dir: dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
