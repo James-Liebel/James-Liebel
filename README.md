@@ -1,4 +1,4 @@
-![James Liebel, Data Science and Statistics, University of Chicago class of 2030](assets/header.png)
+![James Liebel, Data Science and Statistics, University of Chicago class of 2030](assets/header-columns.png)
 
 I build data tools and ship them. This past summer at Siemens Digital Industries I built the platform that runs their student internship program: registration, mentor-reviewed goal setting, evaluations, e-signature sign-off, and learning-hours tracking. It went live for 200+ students, mentors, and managers across four regional programs.
 
