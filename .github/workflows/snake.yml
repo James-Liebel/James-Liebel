@@ -1,0 +1,32 @@
+name: Generate contribution snake
+
+on:
+  schedule:
+    # Redraw once a day so the graph does not go stale.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Dot colours are the site palette rather than the default GitHub green,
+      # so the animation matches the header and the badges.
+      - uses: Platane/snk@v3
+        id: snake
+        with:
+          github_user_name: James-Liebel
+          outputs: |
+            dist/snake.svg?color_snake=#a6cacf&color_dots=#161b22,#243449,#3f5f96,#6d8fd0,#9fc4c9
+            dist/snake-light.svg?color_snake=#3f5f96&color_dots=#eef1f7,#c7d4ea,#9ab0da,#6d8fd0,#3f5f96
+
+      - uses: crazy-max/ghaction-github-pages@v4
+        with:
+          target_branch: output
+          build_dir: dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
