@@ -10,7 +10,7 @@ Mostly Python, SQL, and scikit-learn. Microsoft certified in Power BI.
   <img src="https://img.shields.io/badge/NumPy-1c222b?style=flat-square&logo=numpy&logoColor=7ea2dd" alt="NumPy">
   <img src="https://img.shields.io/badge/scikit--learn-1c222b?style=flat-square&logo=scikitlearn&logoColor=7ea2dd" alt="scikit-learn">
   <img src="https://img.shields.io/badge/XGBoost-1c222b?style=flat-square&logoColor=7ea2dd" alt="XGBoost">
-  <img src="https://img.shields.io/badge/SQL-1c222b?style=flat-square&logo=postgresql&logoColor=7ea2dd" alt="SQL">
+  <img src="https://img.shields.io/badge/SQL-1c222b?style=flat-square&logoColor=7ea2dd" alt="SQL">
   <img src="https://img.shields.io/badge/Jupyter-1c222b?style=flat-square&logo=jupyter&logoColor=7ea2dd" alt="Jupyter">
   <img src="https://img.shields.io/badge/Power%20BI-1c222b?style=flat-square&logo=powerbi&logoColor=7ea2dd" alt="Power BI">
   <img src="https://img.shields.io/badge/D3.js-1c222b?style=flat-square&logo=d3dotjs&logoColor=7ea2dd" alt="D3.js">
@@ -29,7 +29,7 @@ Mostly Python, SQL, and scikit-learn. Microsoft certified in Power BI.
 ### Elsewhere
 
 <p>
-  <a href="https://james-liebel.github.io/portfolio-site/"><img src="https://img.shields.io/badge/Portfolio-5b82c9?style=flat-square&logo=githubpages&logoColor=white" alt="Portfolio"></a>
+  <a href="https://james-liebel.github.io/portfolio-site/"><img src="https://img.shields.io/badge/Portfolio-5b82c9?style=flat-square&logoColor=white" alt="Portfolio"></a>
   <a href="https://james-liebel.github.io/portfolio-site/projects/web/data_science_resume.html"><img src="https://img.shields.io/badge/R%C3%A9sum%C3%A9-5b82c9?style=flat-square&logo=readdotcv&logoColor=white" alt="Résumé"></a>
   <a href="https://linkedin.com/in/james-liebel"><img src="https://img.shields.io/badge/LinkedIn-5b82c9?style=flat-square&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
 </p>
