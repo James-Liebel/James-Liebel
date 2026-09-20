@@ -1,4 +1,6 @@
-![James Liebel, Data Science and Statistics, University of Chicago class of 2030](assets/header-columns.png)
+<a href="https://james-liebel.github.io/portfolio-site/">
+  <img src="assets/header.svg" width="100%" alt="James Liebel, Data Science and Statistics, University of Chicago class of 2030">
+</a>
 
 I build data tools and ship them. This past summer at Siemens Digital Industries I built the platform that runs their student internship program: registration, mentor-reviewed goal setting, evaluations, e-signature sign-off, and learning-hours tracking. It went live for 200+ students, mentors, and managers across four regional programs.
 
@@ -25,6 +27,16 @@ Mostly Python, SQL, and scikit-learn. Microsoft certified in Power BI.
 | **[SpaceX landing prediction](https://github.com/James-Liebel/Personal_Projects/tree/main/projects/SpaceX)** | Eight notebooks end to end: API collection, web scraping, wrangling, SQL EDA, Folium maps, a Dash app, and classifiers reaching 90% test accuracy via GridSearchCV. |
 | **[Machine learning notebooks](https://github.com/James-Liebel/Personal_Projects/tree/main/projects/machine_learning)** | Credit card fraud detection with XGBoost and SMOTE on 284,807 transactions at a 0.17% positive rate: 80% recall at 87% precision, ROC-AUC 0.939. Plus cancer classification, CNN digit recognition, and k-means clustering. |
 | **[CustomStrat](https://customstrat.com)** · [source](https://github.com/James-Liebel/customstrat-site) | Client site I designed and shipped. 29 pages, statically exported, with a typed content layer that derives every article and nav entry from one source. |
+
+### The last year
+
+<a href="https://github.com/James-Liebel?tab=repositories">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/James-Liebel/James-Liebel/output/snake.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/James-Liebel/James-Liebel/output/snake-light.svg">
+    <img src="https://raw.githubusercontent.com/James-Liebel/James-Liebel/output/snake.svg" width="100%" alt="My contribution graph being eaten by a snake">
+  </picture>
+</a>
 
 ### Elsewhere
 
