@@ -206,14 +206,18 @@ def build(theme_name, cells, n_weeks, total, out_path):
         name = "k%d" % i
         dt_ = destroyed.get((wi, wd))
         if dt_ is None:
-            anim = ""
-        else:
-            p = pct(dt_)
-            css.append("@keyframes %s{0%%,%.2f%%{opacity:1}%.2f%%,100%%{opacity:0;transform:scale(.25)}}"
-                       % (name, p, min(100.0, p + 0.6)))
-            anim = ' class="c" style="animation:%s %ss linear infinite"' % (name, dur)
-        parts.append('<use href="#s" x="%d" y="%d" fill="%s"%s/>'
-                     % (x, y, th["levels"][lvl], anim))
+            parts.append('<use href="#s" x="%d" y="%d" fill="%s"/>' % (x, y, th["levels"][lvl]))
+            continue
+        p = pct(dt_)
+        # the alive stop must pin transform too, or it eases toward scale(.25)
+        # for the whole run and the bricks visibly shrink before they are hit
+        css.append("@keyframes %s{0%%,%.2f%%{opacity:1;transform:none}%.2f%%,100%%{opacity:0;transform:scale(.25)}}"
+                   % (name, p, min(100.0, p + 0.6)))
+        # a real rect rather than <use x y>: fill-box ignores a <use>'s x/y, so
+        # scaling one pulls it toward the origin instead of shrinking in place
+        parts.append('<rect x="%d" y="%d" width="%d" height="%d" rx="2.5" fill="%s" class="c" '
+                     'style="animation:%s %ss linear infinite"/>'
+                     % (x, y, BRICK, BRICK, th["levels"][lvl], name, dur))
 
     # every cell gets the faint board square, so a destroyed brick reveals the
     # grid underneath instead of punching a hole in it
