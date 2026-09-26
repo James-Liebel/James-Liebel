@@ -1,9 +1,10 @@
 """Render a GitHub contribution calendar as a playable-looking Breakout board.
 
-The contribution squares are the bricks. A short physics simulation runs
-headless, and only the direction changes are emitted as CSS keyframes -- the
-ball travels in straight lines between them, so linear interpolation in the
-browser reproduces the simulated path exactly at a fraction of the file size.
+The contribution squares are the bricks. A one-ball game with a paddle that
+never misses runs headless, and only the direction changes are emitted as CSS
+keyframes -- the ball travels in straight lines between them, so linear
+interpolation in the browser reproduces the simulated path exactly at a
+fraction of the file size.
 """
 
 import json
@@ -18,10 +19,11 @@ ROWS = 7
 BALL_R = 3.6
 PADDLE_W = 58
 PADDLE_H = 5
-SPEED = 620.0       # px/s
-N_BALLS = 6
-DT = 1.0 / 240
-T_MAX = 40.0
+SPEED = 1050.0      # px/s
+PADDLE_SPEED = 2000.0
+MAX_BOUNCE = 60     # widest launch angle off the paddle, degrees from vertical
+DT = 1.0 / 600
+T_MAX = 90.0
 TAIL = 1.2          # keep playing briefly after the last brick, so the loop has
                     # keyframes all the way to 100% instead of snapping to the origin
 
@@ -64,113 +66,132 @@ def level_of(count, thresholds):
 
 
 def simulate(bricks, width, height, floor_y):
-    """Return (events per ball, paddle events, clear time).
+    """Play one ball against the bricks with a paddle that never misses.
 
-    events are (t, x, y) at every direction change.
+    Returns (balls, paddle events, end time, brick -> hit time, alive map), where
+    each ball carries "ev", its (t, x, y) at every direction change.
     """
     alive = {k: True for k in bricks}
     remaining = len(alive)
-
-    balls = []
-    n = N_BALLS
-    for i in range(n):
-        ang = -50.0 - (80.0 * i / max(1, n - 1))
-        r = math.radians(ang)
-        balls.append({
-            "x": width * (i + 1) / (n + 1),
-            "y": floor_y - 26.0,
-            "vx": SPEED * math.cos(r),
-            "vy": SPEED * math.sin(r),
-            "ev": [],
-        })
-    for b in balls:
-        b["ev"].append((0.0, b["x"], b["y"]))
-
-    paddle_x = width / 2
-    paddle_ev = [(0.0, paddle_x)]
     paddle_y = floor_y - 16
+    catch_y = paddle_y - BALL_R
 
-    def brick_at(px, py):
-        if py < TOP or py > TOP + ROWS * PITCH:
-            return None
-        col = int((px - PAD_X) // PITCH)
-        row = int((py - TOP) // PITCH)
-        if (col, row) in alive and alive[(col, row)]:
-            bx = PAD_X + col * PITCH
-            by = TOP + row * PITCH
-            if bx <= px <= bx + BRICK and by <= py <= by + BRICK:
-                return (col, row)
-        return None
+    def rect(key):
+        return PAD_X + key[0] * PITCH, TOP + key[1] * PITCH
+
+    def landing_x(x, y, vx, vy):
+        # where the ball meets the paddle, folding in any side-wall bounces
+        t = (catch_y - y) / vy
+        lo, hi = BALL_R, width - BALL_R
+        span = hi - lo
+        u = (x + vx * t - lo) % (2 * span)
+        return lo + (u if u <= span else 2 * span - u)
+
+    def aim(lx):
+        """Paddle centre that sends the ball from lx toward the nearest brick."""
+        live = [k for k, v in alive.items() if v]
+        if not live:
+            return lx
+        # prefer low, near bricks: they are reachable without a wall bank
+        def cost(k):
+            bx, by = rect(k)
+            return abs(bx + BRICK / 2 - lx) + (ROWS - k[1]) * 6
+        bx, by = rect(min(live, key=cost))
+        ang = math.degrees(math.atan2(bx + BRICK / 2 - lx, catch_y - (by + BRICK / 2)))
+        off = max(-1.0, min(1.0, ang / MAX_BOUNCE))
+        return lx - off * PADDLE_W / 2
+
+    ball = {"x": width / 2, "y": catch_y, "vx": 0.0, "vy": 0.0, "ev": []}
+    ang = math.radians(-18)
+    ball["vx"], ball["vy"] = SPEED * math.sin(ang), -SPEED * math.cos(ang)
+    ball["ev"].append((0.0, ball["x"], ball["y"]))
+    paddle_x = width / 2
+    paddle_target = paddle_x
+    paddle_ev = [(0.0, paddle_x)]
+    paddle_moving = False
+    hits = []
 
     t = 0.0
     clear_t = None
     while t < T_MAX:
         t += DT
-        # paddle chases the mean of the balls still heading down
-        targets = [b["x"] for b in balls if b["vy"] > 0]
-        target = sum(targets) / len(targets) if targets else width / 2
-        paddle_x += max(-420 * DT, min(420 * DT, target - paddle_x))
-        paddle_x = max(PADDLE_W / 2, min(width - PADDLE_W / 2, paddle_x))
-        if not paddle_ev or abs(paddle_ev[-1][1] - paddle_x) > 6:
-            paddle_ev.append((t, paddle_x))
+        b = ball
+        px, py = b["x"], b["y"]
+        b["x"] += b["vx"] * DT
+        b["y"] += b["vy"] * DT
+        bounced = False
 
-        for b in balls:
-            b["x"] += b["vx"] * DT
-            b["y"] += b["vy"] * DT
-            bounced = False
+        if b["x"] < BALL_R:
+            b["x"] = BALL_R; b["vx"] = abs(b["vx"]); bounced = True
+        elif b["x"] > width - BALL_R:
+            b["x"] = width - BALL_R; b["vx"] = -abs(b["vx"]); bounced = True
+        if b["y"] < BALL_R:
+            b["y"] = BALL_R; b["vy"] = abs(b["vy"]); bounced = True
 
-            if b["x"] < BALL_R:
-                b["x"] = BALL_R; b["vx"] = abs(b["vx"]); bounced = True
-            elif b["x"] > width - BALL_R:
-                b["x"] = width - BALL_R; b["vx"] = -abs(b["vx"]); bounced = True
-            if b["y"] < BALL_R:
-                b["y"] = BALL_R; b["vy"] = abs(b["vy"]); bounced = True
-            elif b["y"] > floor_y - BALL_R:
-                b["y"] = floor_y - BALL_R; b["vy"] = -abs(b["vy"]); bounced = True
-
-            # paddle deflection: angle depends on where it lands on the paddle
-            if (b["vy"] > 0 and paddle_y - 6 < b["y"] < paddle_y + PADDLE_H + 6
-                    and abs(b["x"] - paddle_x) < PADDLE_W / 2 + BALL_R):
-                off = (b["x"] - paddle_x) / (PADDLE_W / 2)
-                ang = math.radians(-90 + 52 * max(-1.0, min(1.0, off)))
-                b["vx"] = SPEED * math.cos(ang)
-                b["vy"] = SPEED * math.sin(ang)
-                b["y"] = paddle_y - 6
-                bounced = True
-
-            hit = brick_at(b["x"], b["y"])
-            if hit is not None:
-                alive[hit] = False
+        # circle against brick rectangles, only the cells the ball can touch
+        col0 = int((b["x"] - BALL_R - PAD_X) // PITCH)
+        row0 = int((b["y"] - BALL_R - TOP) // PITCH)
+        for col in (col0, col0 + 1):
+            for row in (row0, row0 + 1):
+                key = (col, row)
+                if not alive.get(key):
+                    continue
+                bx, by = rect(key)
+                nx = b["x"] - max(bx, min(b["x"], bx + BRICK))
+                ny = b["y"] - max(by, min(b["y"], by + BRICK))
+                if nx * nx + ny * ny > BALL_R * BALL_R:
+                    continue
+                alive[key] = False
                 remaining -= 1
-                bx = PAD_X + hit[0] * PITCH
-                by = TOP + hit[1] * PITCH
-                # reflect on the axis with the shallower overlap
-                dx = min(abs(b["x"] - bx), abs(b["x"] - (bx + BRICK)))
-                dy = min(abs(b["y"] - by), abs(b["y"] - (by + BRICK)))
-                if dx < dy:
+                hits.append((t, key))
+                # reflect on the axis the ball came in from
+                came_x = px + BALL_R <= bx or px - BALL_R >= bx + BRICK
+                came_y = py + BALL_R <= by or py - BALL_R >= by + BRICK
+                if came_x and not came_y:
                     b["vx"] = -b["vx"]
-                else:
+                elif came_y and not came_x:
                     b["vy"] = -b["vy"]
-                b["hits"] = b.get("hits", [])
-                b["hits"].append((t, hit))
+                else:
+                    b["vx"], b["vy"] = -b["vx"], -b["vy"]
+                b["x"], b["y"] = px, py
                 bounced = True
+                break
+            if bounced and (b["x"], b["y"]) == (px, py):
+                break
 
-            if bounced:
-                b["ev"].append((t, b["x"], b["y"]))
+        # the paddle commits to a spot the moment the ball starts coming down
+        if b["vy"] > 0 and (bounced or len(b["ev"]) == 1):
+            lx = landing_x(b["x"], b["y"], b["vx"], b["vy"])
+            paddle_target = max(PADDLE_W / 2, min(width - PADDLE_W / 2, aim(lx)))
+
+        if b["vy"] > 0 and b["y"] >= catch_y:
+            off = (b["x"] - paddle_x) / (PADDLE_W / 2)
+            assert abs(off) <= 1.0 + BALL_R / (PADDLE_W / 2), "paddle missed at t=%.2f" % t
+            a = math.radians(MAX_BOUNCE * max(-1.0, min(1.0, off)))
+            b["vx"], b["vy"] = SPEED * math.sin(a), -SPEED * math.cos(a)
+            b["y"] = catch_y
+            bounced = True
+
+        if bounced:
+            b["ev"].append((t, b["x"], b["y"]))
+
+        step = PADDLE_SPEED * DT
+        gap = paddle_target - paddle_x
+        moving = abs(gap) > 1e-6
+        if moving != paddle_moving:
+            paddle_ev.append((t, paddle_x))
+            paddle_moving = moving
+        paddle_x += max(-step, min(step, gap))
 
         if remaining == 0 and clear_t is None:
             clear_t = t
         if clear_t is not None and t >= clear_t + TAIL:
             break
 
-    for b in balls:
-        b["ev"].append((t, b["x"], b["y"]))
+    ball["ev"].append((t, ball["x"], ball["y"]))
     paddle_ev.append((t, paddle_x))
-    destroyed = {}
-    for b in balls:
-        for ht, key in b.get("hits", []):
-            destroyed[key] = ht
-    return balls, paddle_ev, t, destroyed, alive
+    destroyed = {key: ht for ht, key in hits}
+    return [ball], paddle_ev, t, destroyed, alive
 
 
 def build(theme_name, cells, n_weeks, total, out_path):
@@ -211,8 +232,8 @@ def build(theme_name, cells, n_weeks, total, out_path):
         p = pct(dt_)
         # the alive stop must pin transform too, or it eases toward scale(.25)
         # for the whole run and the bricks visibly shrink before they are hit
-        css.append("@keyframes %s{0%%,%.2f%%{opacity:1;transform:none}%.2f%%,100%%{opacity:0;transform:scale(.25)}}"
-                   % (name, p, min(100.0, p + 0.6)))
+        css.append("@keyframes %s{0%%,%.3f%%{opacity:1;transform:none}%.3f%%,100%%{opacity:0;transform:scale(.25)}}"
+                   % (name, p, min(100.0, p + 0.25)))
         # a real rect rather than <use x y>: fill-box ignores a <use>'s x/y, so
         # scaling one pulls it toward the origin instead of shrinking in place
         parts.append('<rect x="%d" y="%d" width="%d" height="%d" rx="2.5" fill="%s" class="c" '
@@ -229,27 +250,27 @@ def build(theme_name, cells, n_weeks, total, out_path):
     # balls
     for bi, b in enumerate(balls):
         stops = []
-        last = -1.0
-        ev = b["ev"]
-        for i, (t, x, y) in enumerate(ev):
-            p = pct(t)
-            if p - last < 0.05 and i != len(ev) - 1:
+        last = None
+        # every bounce is kept: dropping one bends the whole path after it
+        for t, x, y in b["ev"]:
+            stop = "%.3f%%" % pct(t)
+            if stop == last:
                 continue
-            last = p
-            stops.append("%.2f%%{transform:translate(%dpx,%dpx)}" % (p, round(x), round(y)))
+            last = stop
+            stops.append("%s{transform:translate(%.1fpx,%.1fpx)}" % (stop, x, y))
         css.append("@keyframes ball%d{%s}" % (bi, "".join(stops)))
         parts.append('<circle class="ball" r="%.1f" fill="%s" style="animation:ball%d %ss linear infinite"/>'
                      % (BALL_R, th["ball"], bi, dur))
 
     # paddle
     stops = []
-    last = -1.0
-    for i, (t, x) in enumerate(paddle_ev):
-        p = pct(t)
-        if p - last < 0.05 and i != len(paddle_ev) - 1:
+    last = None
+    for t, x in paddle_ev:
+        stop = "%.3f%%" % pct(t)
+        if stop == last:
             continue
-        last = p
-        stops.append("%.2f%%{transform:translate(%dpx,0)}" % (p, round(x - PADDLE_W / 2)))
+        last = stop
+        stops.append("%s{transform:translate(%.1fpx,0)}" % (stop, x - PADDLE_W / 2))
     css.append("@keyframes pad{%s}" % "".join(stops))
     parts.append('<rect class="pad" y="%d" width="%d" height="%d" rx="2.5" fill="%s" style="animation:pad %ss linear infinite"/>'
                  % (paddle_y, PADDLE_W, PADDLE_H, th["paddle"], dur))
