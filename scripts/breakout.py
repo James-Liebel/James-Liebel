@@ -9,6 +9,7 @@ fraction of the file size.
 
 import json
 import math
+import random
 import sys
 
 PITCH = 14          # cell-to-cell distance
@@ -21,7 +22,9 @@ PADDLE_W = 58
 PADDLE_H = 5
 SPEED = 1050.0      # px/s
 PADDLE_SPEED = 2000.0
-MAX_BOUNCE = 60     # widest launch angle off the paddle, degrees from vertical
+MAX_BOUNCE = 65     # widest launch angle off the paddle, degrees from vertical
+MIN_LAUNCH = 28     # never send the ball straight up; real Breakout plays on the diagonal
+BRICK_JITTER = 7    # degrees of scatter on a brick hit, so rebounds are not mirror-perfect
 DT = 1.0 / 600
 T_MAX = 90.0
 TAIL = 1.2          # keep playing briefly after the last brick, so the loop has
@@ -87,22 +90,49 @@ def simulate(bricks, width, height, floor_y):
         u = (x + vx * t - lo) % (2 * span)
         return lo + (u if u <= span else 2 * span - u)
 
+    # seeded from the board so the same calendar always plays the same game
+    rng = random.Random(len(bricks))
+
     def aim(lx):
-        """Paddle centre that sends the ball from lx toward the nearest brick."""
-        live = [k for k, v in alive.items() if v]
-        if not live:
-            return lx
-        # prefer low, near bricks: they are reachable without a wall bank
-        def cost(k):
-            bx, by = rect(k)
-            return abs(bx + BRICK / 2 - lx) + (ROWS - k[1]) * 6
-        bx, by = rect(min(live, key=cost))
-        ang = math.degrees(math.atan2(bx + BRICK / 2 - lx, catch_y - (by + BRICK / 2)))
-        off = max(-1.0, min(1.0, ang / MAX_BOUNCE))
-        return lx - off * PADDLE_W / 2
+        """Paddle centre that sends the ball from lx on a diagonal at a brick.
+
+        Each brick can be reached straight or banked off either side wall
+        (aim at its mirror image). Only shots between MIN_LAUNCH and
+        MAX_BOUNCE qualify, and one of the shortest few is picked at random.
+        """
+        left, right = BALL_R, width - BALL_R
+        shots = []
+        for key, up in alive.items():
+            if not up:
+                continue
+            bx, by = rect(key)
+            cx, cy = bx + BRICK / 2, by + BRICK / 2
+            for tx in (cx, 2 * left - cx, 2 * right - cx):
+                ang = math.degrees(math.atan2(tx - lx, catch_y - cy))
+                if MIN_LAUNCH <= abs(ang) <= MAX_BOUNCE:
+                    shots.append((math.hypot(tx - lx, catch_y - cy), ang))
+        if shots:
+            shots.sort()
+            ang = rng.choice(shots[:6])[1]
+        else:
+            ang = rng.choice((-1, 1)) * rng.uniform(MIN_LAUNCH, MAX_BOUNCE)
+        sign = 1 if ang >= 0 else -1
+        ang = sign * max(MIN_LAUNCH, min(MAX_BOUNCE, abs(ang) + rng.uniform(-3, 3)))
+        return lx - ang / MAX_BOUNCE * PADDLE_W / 2
+
+    def scatter(b):
+        # rotate a rebound a few degrees, but keep it off the pure vertical and
+        # pure horizontal, where the ball would crawl or bounce in place
+        heading = math.degrees(math.atan2(b["vx"], -b["vy"] if b["vy"] < 0 else b["vy"]))
+        heading += rng.uniform(-BRICK_JITTER, BRICK_JITTER)
+        sign = 1 if heading >= 0 else -1
+        heading = sign * max(18.0, min(70.0, abs(heading)))
+        a = math.radians(heading)
+        down = 1 if b["vy"] > 0 else -1
+        b["vx"], b["vy"] = SPEED * math.sin(a), down * SPEED * math.cos(a)
 
     ball = {"x": width / 2, "y": catch_y, "vx": 0.0, "vy": 0.0, "ev": []}
-    ang = math.radians(-18)
+    ang = math.radians(-40)
     ball["vx"], ball["vy"] = SPEED * math.sin(ang), -SPEED * math.cos(ang)
     ball["ev"].append((0.0, ball["x"], ball["y"]))
     paddle_x = width / 2
@@ -153,6 +183,7 @@ def simulate(bricks, width, height, floor_y):
                     b["vy"] = -b["vy"]
                 else:
                     b["vx"], b["vy"] = -b["vx"], -b["vy"]
+                scatter(b)
                 b["x"], b["y"] = px, py
                 bounced = True
                 break
